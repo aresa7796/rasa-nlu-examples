@@ -55,7 +55,7 @@ class GensimFeaturizer(DenseFeaturizer):
                 f"It seems that file {path} does not exists. Please check config."
             )
 
-        self.kv = KeyedVectors.load(path)
+        self.kv = KeyedVectors.load_word2vec_format(path)
 
     def train(
         self,
