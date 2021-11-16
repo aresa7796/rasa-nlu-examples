@@ -1,4 +1,5 @@
 from .sparse_naive_bayes_intent_classifier import SparseNaiveBayesIntentClassifier
+from .bert_classifier import BertClassifier
 from .sparse_logistic_regression_intent_classifier import (
     SparseLogisticRegressionIntentClassifier,
 )
@@ -6,4 +7,5 @@ from .sparse_logistic_regression_intent_classifier import (
 __all__ = [
     "SparseNaiveBayesIntentClassifier",
     "SparseLogisticRegressionIntentClassifier",
+    "BertClassifier",
 ]
