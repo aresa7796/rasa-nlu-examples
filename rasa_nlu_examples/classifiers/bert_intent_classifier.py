@@ -5,20 +5,22 @@ import os
 import typing
 from typing import Any, Dict, List, Optional, Text, Tuple
 
-from rasa.nlu import utils
+from rasa.utils import io as utils
 from rasa.nlu.classifiers import LABEL_RANKING_LENGTH
+from rasa.shared.nlu.constants import TEXT
 from rasa.nlu.components import Component
 from rasa.nlu.config import RasaNLUModelConfig
 from rasa.nlu.model import Metadata
-from rasa.nlu.training_data import Message, TrainingData
-from rasa.nlu.constants import MESSAGE_VECTOR_FEATURE_NAMES, MESSAGE_TEXT_ATTRIBUTE
+from rasa.shared.nlu.training_data.training_data import TrainingData
+from rasa.shared.nlu.training_data.message import Message
+#from rasa.shared.nlu.constants import MESSAGE_VECTOR_FEATURE_NAMES, MESSAGE_TEXT_ATTRIBUTE
 
 class BertClassifier(Component):
     "A custom BERT classifier component using the bert-sklearn wrapper."
 
     provides = ['intent', 'intent_ranking']
 
-    requires = [MESSAGE_VECTOR_FEATURE_NAMES[MESSAGE_TEXT_ATTRIBUTE]]
+    #requires = [MESSAGE_VECTOR_FEATURE_NAMES[MESSAGE_TEXT_ATTRIBUTE]]
 
     defaults = {
         # default model is bert-base-uncased: 12-layer, 768-hidden, 12-heads, 110M parameters
@@ -33,7 +35,7 @@ class BertClassifier(Component):
         'validation_fraction': 0.1
     }
 
-    language_list = ["en"]
+    language_list = ["en", "zh"]
 
     def __init__(
         self,
@@ -86,13 +88,23 @@ class BertClassifier(Component):
             y = self.transform_labels_str2num(labels)
             X = np.stack(
                 [
-                    example.get("text_features")
+                    self._get_sentence_features(example)
                     for example in training_data.intent_examples
                 ]
             )
-
+            print('train data np.stack: ', X, '\n')
             self.clf = self._create_classifier(num_threads, y)
             self.clf.fit(X, y)
+
+    @staticmethod
+    def _get_sentence_features(message: Message) -> np.ndarray:
+        _, sentence_features = message.get_dense_features(TEXT)
+        if sentence_features is not None:
+            return sentence_features.features[0]
+
+        raise ValueError(
+            "No sentence features present. Not able to train sklearn policy."
+        )
 
     def _create_classifier(self, num_threads, y):
         from bert_sklearn import BertClassifier
@@ -122,7 +134,7 @@ class BertClassifier(Component):
             intent_ranking = []
 
         else:
-            X = message.get("text_features").reshape(1, -1)
+            X = self._get_sentence_features(message).reshape(1, -1)
             intent_ids, probabilities = self.predict(X)
             intents = self.transform_labels_num2str(np.ravel(intent_ids))
             # `predict` returns a matrix as it is supposed
